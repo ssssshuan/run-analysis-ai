@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跑步姿态AI分析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: rgba(0, 10, 25, 0.95);
+            height: 100vh;
+            overflow: hidden;
+            color: #e2e8f0;
+        }
+        .main-container {
+            display: flex;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+        .left-panel {
+            width: 400px;
+            background: rgba(0, 5, 15, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            overflow-y: auto;
+        }
+        .right-panel {
+            flex: 1;
+            background: rgba(0, 5, 15, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            overflow-y: auto;
+            position: relative;
+        }
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+            letter-spacing: 2px;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+            padding-left: 10px;
+        }
+        .api-config {
+            background: rgba(30, 41, 59, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .api-config label {
+            display: block;
+            margin-bottom: 6px;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .api-config input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        .api-config input::placeholder {
+            color: #475569;
+        }
+        .api-config input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+        .api-config p {
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .upload-area {
+            border: 2px dashed #38bdf8;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .upload-area:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: #0ea5e9;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        .upload-area h3 {
+            color: #e2e8f0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .upload-area p {
+            color: #64748b;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.6);
+        }
+        button.warning {
+            background: linear-gradient(135deg, #eab308 0%, #fde047 100%);
+            color: #000a1f;
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+        }
+        button.warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(234, 179, 8, 0.6);
+        }
+        /* 自定义滚动条样式 */
+        .report-container::-webkit-scrollbar {
+            width: 12px;
+        }
+        .report-container::-webkit-scrollbar-track {
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 10px;
+        }
+        .report-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 26, 63, 0.8);
+        }
+        .report-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        .content::-webkit-scrollbar {
+            width: 12px;
+        }
+        .content::-webkit-scrollbar-track {
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 10px;
+        }
+        .content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 26, 63, 0.8);
+        }
+        .content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        .left-panel::-webkit-scrollbar {
+            width: 10px;
+        }
+        .left-panel::-webkit-scrollbar-track {
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 10px;
+        }
+        .left-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 26, 63, 0.8);
+        }
+        .left-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        .right-panel::-webkit-scrollbar {
+            width: 12px;
+        }
+        .right-panel::-webkit-scrollbar-track {
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 10px;
+        }
+        .right-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 26, 63, 0.8);
+        }
+        .right-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        .frames-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .frame-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            aspect-ratio: 16/9;
+        }
+        .frame-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .frame-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(56, 189, 248, 0.9);
+            color: #000a1f;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .preview-title {
+            color: #38bdf8;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .preview-notice {
+            color: #fbbf24;
+            font-size: 0.85em;
+            display: block;
+            margin-top: 5px;
+        }
+        .regenerate-btn {
+            padding: 8px 16px;
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: auto;
+            text-transform: none;
+            letter-spacing: normal;
+            box-shadow: none;
+        }
+        .regenerate-btn:hover {
+            background: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(56, 189, 248, 0.2);
+            border-top: 4px solid #38bdf8;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .report-container {
+            display: none;
+        }
+        .report-container.show {
+            display: block;
+        }
+        .export-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            padding: 10px 20px;
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            width: auto;
+            text-transform: none;
+            letter-spacing: normal;
+            box-shadow: none;
+        }
+        .export-btn:hover {
+            background: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+        .report-section {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .report-section h3 {
+            color: #38bdf8;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .report-section p, .report-section ul {
+            color: #cbd5e1;
+            line-height: 1.8;
+            font-size: 0.95em;
+        }
+        .report-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .report-section li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .report-section li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #38bdf8;
+        }
+        .score-display {
+            display: inline-block;
+            padding: 15px 20px;
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 10px;
+            margin: 8px;
+            text-align: center;
+            min-width: 120px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .score-display .label {
+            color: #94a3b8;
+            font-size: 0.85em;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .score-display .value {
+            color: #38bdf8;
+            font-size: 1.4em;
+            font-weight: bold;
+            display: block;
+        }
+        .scores-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-size: 0.9em;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        #previewSection {
+            display: none;
+        }
+        #previewSection.show {
+            display: block;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: #475569;
+        }
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="left-panel">
+            <h1>🏃 跑步姿态分析</h1>
+            <p class="subtitle">AI驱动的运动生物力学评估系统</p>
+
+            <div class="api-config">
+                <label for="apiUrl">API 地址</label>
+                <input type="text" id="apiUrl" placeholder="输入你的API地址，如 https://api.deepseek.com">
+
+                <label for="apiKey">API Key</label>
+                <input type="password" id="apiKey" placeholder="输入你的API Key，如 sk-......">
+
+                <label for="modelName">模型名称</label>
+                <input type="text" id="modelName" placeholder="输入模型名称，如 deepseek-chat">
+
+                <p>💡 请使用能分析图片的AI，如DeepSeek-V4.1-Flash，Qwen3.8-Flash，GPT-6-Astra，Gemini3.8-flash等</p>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">🎥</div>
+                <h3>上传视频</h3>
+                <p>请上传8-10秒视频，并确保人物全身清晰可见</p>
+                <p style="margin-top: 5px; font-size: 0.8em;">支持 MP4, MOV, AVI 格式</p>
+                <input type="file" id="videoInput" accept="video/*">
+            </div>
+
+            <button id="analyzeBtn">开始分析</button>
+            <div class="error" id="error"></div>
+        </div>
+
+        <div class="right-panel">
+            <div class="empty-state" id="emptyState">
+                <div class="icon">📊</div>
+                <p>上传视频开始分析</p>
+            </div>
+
+            <div id="previewSection">
+                <div class="preview-header">
+                    <div>
+                        <div class="preview-title">预览图</div>
+                        <span class="preview-notice">⚠ 请确认人物在至少一张画面内清晰可见</span>
+                    </div>
+                    <button class="regenerate-btn" id="regenerateBtn">🔄 重新生成</button>
+                </div>
+                <div class="frames-display" id="framesGrid"></div>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>正在分析跑步姿态，请稍候...</p>
+            </div>
+
+            <div class="report-container" id="reportContainer">
+                <button class="export-btn" id="exportBtn">📥 导出报告</button>
+                <div id="reportContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const videoInput = document.getElementById('videoInput');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const apiKeyInput = document.getElementById('apiKey');
+        const modelNameInput = document.getElementById('modelName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const framesGrid = document.getElementById('framesGrid');
+        const regenerateBtn = document.getElementById('regenerateBtn');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const emptyState = document.getElementById('emptyState');
+        const previewSection = document.getElementById('previewSection');
+        const reportContainer = document.getElementById('reportContainer');
+        const reportContent = document.getElementById('reportContent');
+        const exportBtn = document.getElementById('exportBtn');
+
+        let videoFile = null;
+        let extractedFrames = [];
+        let currentVideo = null;
+        let isAnalyzing = false;
+        let abortController = null;
+        let rawReportText = '';
+
+        uploadArea.addEventListener('click', () => videoInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(56, 189, 248, 0.15)';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = 'rgba(56, 189, 248, 0.05)';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(56, 189, 248, 0.05)';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleVideoUpload(files[0]);
+            }
+        });
+
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleVideoUpload(e.target.files[0]);
+            }
+        });
+
+        async function handleVideoUpload(file) {
+            if (!file.type.startsWith('video/')) {
+                showError('请上传视频文件');
+                return;
+            }
+
+            videoFile = file;
+            currentVideo = file;
+            uploadArea.innerHTML = `<p style="padding: 20px; color: #38bdf8; text-align: center;">✅ 已选择: ${file.name}</p>`;
+
+            emptyState.style.display = 'none';
+            previewSection.classList.add('show');
+            reportContainer.classList.remove('show');
+
+            await extractFrames(file);
+        }
+
+        async function regenerateFrames() {
+            if (!currentVideo) return;
+            framesGrid.innerHTML = '<p style="text-align: center; padding: 40px; color: #64748b;">正在重新生成...</p>';
+            await extractFrames(currentVideo);
+        }
+
+        async function extractFrames(file) {
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.src = URL.createObjectURL(file);
+
+                video.onloadedmetadata = () => {
+                    const duration = video.duration;
+                    const numFrames = 4;
+                    extractedFrames = [];
+                    framesGrid.innerHTML = '';
+
+                    const timePoints = [];
+                    for (let i = 0; i < numFrames; i++) {
+                        const segmentStart = (i / numFrames) * duration;
+                        const segmentEnd = ((i + 1) / numFrames) * duration;
+                        const randomTime = segmentStart + Math.random() * (segmentEnd - segmentStart);
+                        timePoints.push(randomTime);
+                    }
+
+                    const extractFrame = (index) => {
+                        if (index >= numFrames) {
+                            resolve();
+                            return;
+                        }
+
+                        video.currentTime = timePoints[index];
+
+                        video.onseeked = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 640;
+                            canvas.height = 360;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            canvas.toBlob((blob) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    const base64 = reader.result.split(',')[1];
+                                    extractedFrames.push({
+                                        data: base64,
+                                        time: timePoints[index].toFixed(1)
+                                    });
+
+                                    const frameDiv = document.createElement('div');
+                                    frameDiv.className = 'frame-item';
+                                    frameDiv.innerHTML = `
+                                        <img src="data:image/jpeg;base64,${base64}">
+                                        <div class="frame-label">图 ${index + 1} (${timePoints[index].toFixed(1)}s)</div>
+                                    `;
+                                    framesGrid.appendChild(frameDiv);
+
+                                    extractFrame(index + 1);
+                                };
+                                reader.readAsDataURL(blob);
+                            }, 'image/jpeg', 0.8);
+                        };
+                    };
+
+                    extractFrame(0);
+                };
+            });
+        }
+
+        analyzeBtn.addEventListener('click', () => {
+            if (isAnalyzing) {
+                // 终止分析
+                if (abortController) {
+                    abortController.abort();
+                }
+                resetAll();
+            } else if (analyzeBtn.textContent === '重置') {
+                // 重置状态
+                resetAll();
+            } else {
+                // 开始分析
+                analyzeVideo();
+            }
+        });
+        regenerateBtn.addEventListener('click', regenerateFrames);
+        exportBtn.addEventListener('click', exportReport);
+
+        function resetAll() {
+            // 重置所有状态
+            isAnalyzing = false;
+            videoFile = null;
+            currentVideo = null;
+            extractedFrames = [];
+            rawReportText = '';
+
+            // 重置视频输入
+            videoInput.value = '';
+
+            // 重置UI
+            uploadArea.innerHTML = `
+                <div class="upload-icon">🎥</div>
+                <h3>上传视频</h3>
+                <p>请上传8-10秒视频，并确保人物全身清晰可见</p>
+                <p style="margin-top: 5px; font-size: 0.8em;">支持 MP4, MOV, AVI 格式</p>
+            `;
+
+            // 清空预览图
+            framesGrid.innerHTML = '';
+
+            // 清空报告
+            reportContent.innerHTML = '';
+
+            // 重置右侧显示状态
+            previewSection.classList.remove('show');
+            reportContainer.classList.remove('show');
+            loading.style.display = 'none';
+            emptyState.style.display = 'block';
+            errorDiv.classList.remove('show');
+
+            // 重置按钮
+            analyzeBtn.textContent = '开始分析';
+            analyzeBtn.disabled = false;
+            analyzeBtn.classList.remove('warning');
+        }
+
+        async function analyzeVideo() {
+            const apiUrl = apiUrlInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+            const modelName = modelNameInput.value.trim();
+
+            if (!videoFile) {
+                showError('请先上传视频');
+                return;
+            }
+            if (!apiUrl) {
+                showError('请填写API地址');
+                return;
+            }
+            if (!apiKey) {
+                showError('请填写API Key');
+                return;
+            }
+            if (!modelName) {
+                showError('请填写模型名称');
+                return;
+            }
+
+            // 自动修正API地址格式
+            let correctedApiUrl = apiUrl.trim();
+            if (!correctedApiUrl.includes('/v1') && !correctedApiUrl.endsWith('/chat/completions')) {
+                if (correctedApiUrl.endsWith('/')) {
+                    correctedApiUrl = correctedApiUrl + 'v1';
+                } else {
+                    correctedApiUrl = correctedApiUrl + '/v1';
+                }
+                console.log('API地址已自动补全为:', correctedApiUrl);
+            }
+
+            previewSection.classList.remove('show');
+            loading.style.display = 'block';
+            errorDiv.classList.remove('show');
+
+            isAnalyzing = true;
+            analyzeBtn.textContent = '终止分析';
+            analyzeBtn.disabled = false;
+            analyzeBtn.classList.add('warning');
+
+            abortController = new AbortController();
+
+            try {
+                const prompt = `你是专业的运动生物力学分析师，擅长分析小学生跑步动作。
+
+请分析这${extractedFrames.length}张跑步关键帧图片（时间点：${extractedFrames.map(f => f.time + 's').join('、')}），从多个时刻综合评估跑步姿态。
+
+【评分标准】
+小学生跑步评分标准（总分100）
+
+一、摆臂技术（30分）
+1. 肘关节角度（10分）- 应保持85-95度
+2. 摆臂方向（10分）- 前后直线摆动
+3. 左右对称性（10分）- 角度差≤5度
+
+二、躯干姿态（25分）
+1. 躯干稳定性（10分）- 正直，轻微前倾5-10度
+2. 头部位置（8分）- 正直，平视前方
+3. 核心控制（7分）- 核心收紧，腰背直线
+
+三、下肢动作（25分）
+1. 步幅与步频（10分）- 步幅为身高0.8-1.0倍
+2. 着地方式（8分）- 前脚掌先着地
+3. 膝关节缓冲（7分）- 自然弯曲，缓冲流畅
+
+四、整体协调性（20分）
+1. 上下肢配合（10分）- 对侧摆动协调
+2. 节奏感（10分）- 节奏稳定
+
+【严格输出格式要求】
+请严格按照以下格式输出，每个标签必须独立一行：
+
+[总体评价]
+（一句话30字内总结）
+
+[综合评分]
+总分：XX/100
+等级：优秀/良好/及格/需努力
+
+[摆臂技术]
+总分：XX/30
+图1：左臂XX°，右臂XX°
+图2：左臂XX°，右臂XX°
+图3：左臂XX°，右臂XX°
+图4：左臂XX°，右臂XX°
+评价：结合角度数据和评分标准，详细评价摆臂技术的优缺点，包括角度是否标准、左右对称性、摆动方向是否正确等，2-3句话
+
+[躯干姿态]
+总分：XX/25
+躯干稳定性：X/10
+头部位置：X/8
+核心控制：X/7
+评价：详细评价躯干姿态的优缺点，包括前倾角度、稳定性、头部位置等，2-3句话
+
+[下肢动作]
+总分：XX/25
+步幅与步频：X/10
+着地方式：X/8
+膝关节缓冲：X/7
+评价：详细评价下肢动作的优缺点，包括步幅步频是否合理、着地方式、膝关节缓冲等，2-3句话
+
+[整体协调性]
+总分：XX/20
+上下肢配合：X/10
+节奏感：X/10
+评价：详细评价整体协调性，包括上下肢配合、节奏稳定性等，2-3句话
+
+[优点]
+1. （具体优点）
+2. （具体优点）
+
+[改进建议]
+1. （具体问题和改进方法）
+2. （具体问题和改进方法）
+
+[训练计划]
+1. （可操作的训练建议）
+2. （可操作的训练建议）`;
+
+                const messages = [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            ...extractedFrames.map(frame => ({
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:image/jpeg;base64,${frame.data}`
+                                }
+                            }))
+                        ]
+                    }
+                ];
+
+                const requestBody = {
+                    model: modelName,
+                    messages: messages,
+                    max_tokens: 16000  // 设置到最大
+                };
+
+                const endpoint = correctedApiUrl.endsWith('/chat/completions')
+                    ? correctedApiUrl
+                    : correctedApiUrl.endsWith('/')
+                        ? `${correctedApiUrl}chat/completions`
+                        : `${correctedApiUrl}/chat/completions`;
+
+                console.log('请求地址:', endpoint);
+                console.log('模型:', modelName);
+                console.log('图片数量:', extractedFrames.length);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: abortController.signal
+                }).catch(err => {
+                    if (err.name === 'AbortError') {
+                        throw new Error('分析已终止');
+                    }
+                    throw new Error(`网络请求失败: ${err.message}`);
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API返回:', response.status, errorText.substring(0, 500));
+                    let errorMessage = `API错误 ${response.status}`;
+
+                    // 检查是否是HTML错误页
+                    if (errorText.startsWith('<!') || errorText.startsWith('<html')) {
+                        errorMessage = `API地址可能不正确，返回了HTML页面而不是API响应。请检查API地址是否正确。当前地址: ${endpoint}`;
+                    } else {
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            errorMessage = errorData.error?.message || errorData.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = `${errorMessage}: ${errorText.substring(0, 100)}`;
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                console.log('API完整响应:', JSON.stringify(data, null, 2));
+
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    throw new Error('API响应格式不正确，未找到有效内容');
+                }
+
+                rawReportText = data.choices[0].message.content;
+
+                // DeepSeek 特殊处理：如果 content 为空但有 reasoning_content
+                if ((!rawReportText || rawReportText.trim().length === 0) && data.choices[0].message.reasoning_content) {
+                    console.warn('content为空，使用reasoning_content');
+                    rawReportText = data.choices[0].message.reasoning_content;
+                }
+
+                if (!rawReportText || rawReportText.trim().length === 0) {
+                    console.error('choices[0]:', data.choices[0]);
+                    throw new Error('AI返回内容为空。finish_reason: ' + data.choices[0].finish_reason + '。请尝试使用 deepseek-chat 或 gemini-1.5-flash 模型');
+                }
+
+                console.log('AI返回内容长度:', rawReportText.length);
+                console.log('AI返回完整内容:', rawReportText);
+
+                displayReport(rawReportText);
+
+                loading.style.display = 'none';
+                reportContainer.classList.add('show');
+
+                isAnalyzing = false;
+                analyzeBtn.textContent = '重置';
+                analyzeBtn.classList.add('warning');
+
+            } catch (error) {
+                loading.style.display = 'none';
+                previewSection.classList.add('show');
+                showError(`分析出错: ${error.message}`);
+                isAnalyzing = false;
+                analyzeBtn.textContent = '开始分析';
+            }
+        }
+
+        function displayReport(text) {
+            const sections = parseReport(text);
+            let html = '';
+
+            if (sections.overall) {
+                html += `<div class="report-section">
+                    <h3>总体评价</h3>
+                    <p>${sections.overall}</p>
+                </div>`;
+            }
+
+            if (sections.score) {
+                html += `<div class="report-section">
+                    <h3>综合评分</h3>
+                    <div class="scores-grid">
+                        ${sections.score.map(item => `
+                            <div class="score-display">
+                                <span class="label">${item.label}</span>
+                                <span class="value">${item.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+
+            if (sections.arm) {
+                html += `<div class="report-section">
+                    <h3>摆臂技术</h3>
+                    <div class="scores-grid">`;
+
+                // 先显示总分
+                const totalScore = sections.arm.find(item => item.label.includes('总分'));
+                if (totalScore) {
+                    html += `<div class="score-display">
+                        <span class="label">${totalScore.label}</span>
+                        <span class="value">${totalScore.value}</span>
+                    </div>`;
+                }
+
+                // 再显示角度数据
+                if (sections.armAngles && sections.armAngles.frames.length > 0) {
+                    sections.armAngles.frames.forEach(frame => {
+                        html += `<div class="score-display">
+                            <span class="label">${frame.label}</span>
+                            <span class="value" style="font-size: 0.9em;">${frame.value}</span>
+                        </div>`;
+                    });
+                }
+
+                html += `</div>`;
+
+                // 评价文字在下一行
+                if (sections.armEval) {
+                    html += `<ul><li>${sections.armEval}</li></ul>`;
+                }
+
+                html += `</div>`;
+            }
+
+            if (sections.torso) {
+                html += `<div class="report-section">
+                    <h3>躯干姿态</h3>
+                    <div class="scores-grid">
+                        ${sections.torso.map(item => `
+                            <div class="score-display">
+                                <span class="label">${item.label}</span>
+                                <span class="value">${item.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${sections.torsoEval ? `<ul><li>${sections.torsoEval}</li></ul>` : ''}
+                </div>`;
+            }
+
+            if (sections.leg) {
+                html += `<div class="report-section">
+                    <h3>下肢动作</h3>
+                    <div class="scores-grid">
+                        ${sections.leg.map(item => `
+                            <div class="score-display">
+                                <span class="label">${item.label}</span>
+                                <span class="value">${item.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${sections.legEval ? `<ul><li>${sections.legEval}</li></ul>` : ''}
+                </div>`;
+            }
+
+            if (sections.coordination) {
+                html += `<div class="report-section">
+                    <h3>整体协调性</h3>
+                    <div class="scores-grid">
+                        ${sections.coordination.map(item => `
+                            <div class="score-display">
+                                <span class="label">${item.label}</span>
+                                <span class="value">${item.value}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${sections.coordinationEval ? `<ul><li>${sections.coordinationEval}</li></ul>` : ''}
+                </div>`;
+            }
+
+            if (sections.advantages && sections.advantages.length > 0) {
+                html += `<div class="report-section">
+                    <h3>✓ 做得好的地方</h3>
+                    <ul>${sections.advantages.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>`;
+            }
+
+            if (sections.improvements && sections.improvements.length > 0) {
+                html += `<div class="report-section">
+                    <h3>↗ 需要改进</h3>
+                    <ul>${sections.improvements.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>`;
+            }
+
+            if (sections.training && sections.training.length > 0) {
+                html += `<div class="report-section">
+                    <h3>📋 训练计划</h3>
+                    <ul>${sections.training.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>`;
+            }
+
+            reportContent.innerHTML = html || `<p style="color: #64748b;">报告格式解析失败，原始内容：<br><br>${text}</p>`;
+        }
+
+        function parseReport(text) {
+            const sections = {};
+
+            // 去除Markdown代码块标记
+            text = text.replace(/```[\s\S]*?```/g, '').trim();
+
+            // 提取总体评价 - 支持多种格式
+            let overallMatch = text.match(/\[总体评价\]\s*\n(.+?)(?=\n\[|$)/s);
+            if (!overallMatch) {
+                overallMatch = text.match(/##?\s*总体评价\s*\n(.+?)(?=\n##?|$)/s);
+            }
+            if (overallMatch) sections.overall = overallMatch[1].trim();
+
+            // 提取综合评分 - 支持多种格式
+            let scoreMatch = text.match(/\[综合评分\]\s*\n(.+?)(?=\n\[|$)/s);
+            if (!scoreMatch) {
+                scoreMatch = text.match(/##?\s*综合评分\s*\n(.+?)(?=\n##?|$)/s);
+            }
+            if (scoreMatch) {
+                sections.score = [];
+                const lines = scoreMatch[1].trim().split('\n');
+                lines.forEach(line => {
+                    const match = line.match(/(.+?)[:：]\s*(.+)/);
+                    if (match) {
+                        sections.score.push({ label: match[1].trim(), value: match[2].trim() });
+                    }
+                });
+            }
+
+            // 提取各项评分 - 支持多种格式
+            const parseScoreSection = (sectionName) => {
+                let regex = new RegExp(`\\[${sectionName}\\]\\s*\\n(.+?)(?=\\n\\[|$)`, 's');
+                let match = text.match(regex);
+                if (!match) {
+                    regex = new RegExp(`##?\\s*${sectionName}\\s*\\n(.+?)(?=\\n##?|$)`, 's');
+                    match = text.match(regex);
+                }
+                if (match) {
+                    const items = [];
+                    let evaluation = '';
+                    let armAnglesData = [];
+                    const lines = match[1].trim().split('\n');
+                    lines.forEach(line => {
+                        const trimmedLine = line.trim();
+
+                        // 提取评价行
+                        if (trimmedLine.startsWith('评价：') || trimmedLine.startsWith('评价:')) {
+                            evaluation = trimmedLine.replace(/^评价[：:]\s*/, '').trim();
+                        }
+                        // 提取图X角度数据（仅用于摆臂技术）
+                        else if (trimmedLine.match(/^图\s*\d+[：:]/)) {
+                            const frameMatch = trimmedLine.match(/^(图\s*\d+)[：:]\s*(.+)/);
+                            if (frameMatch) {
+                                armAnglesData.push({ label: frameMatch[1], value: frameMatch[2].trim() });
+                            }
+                        }
+                        // 提取评分项（排除图X和评价行）
+                        else if (trimmedLine.includes('：') || trimmedLine.includes(':')) {
+                            const scoreMatch = trimmedLine.match(/^(.+?)[：:]\s*(.+)$/);
+                            if (scoreMatch) {
+                                items.push({ label: scoreMatch[1].trim(), value: scoreMatch[2].trim() });
+                            }
+                        }
+                    });
+                    return { items: items.length > 0 ? items : null, evaluation, armAnglesData };
+                }
+                return { items: null, evaluation: '', armAnglesData: [] };
+            };
+
+            const armResult = parseScoreSection('摆臂技术');
+            sections.arm = armResult.items;
+            sections.armEval = armResult.evaluation;
+            if (armResult.armAnglesData.length > 0) {
+                sections.armAngles = { frames: armResult.armAnglesData, comment: '' };
+            }
+
+            const torsoResult = parseScoreSection('躯干姿态');
+            sections.torso = torsoResult.items;
+            sections.torsoEval = torsoResult.evaluation;
+
+            const legResult = parseScoreSection('下肢动作');
+            sections.leg = legResult.items;
+            sections.legEval = legResult.evaluation;
+
+            const coordinationResult = parseScoreSection('整体协调性');
+            sections.coordination = coordinationResult.items;
+            sections.coordinationEval = coordinationResult.evaluation;
+
+            // 提取列表项 - 支持多种格式
+            const parseList = (sectionName) => {
+                let regex = new RegExp(`\\[${sectionName}\\]\\s*\\n(.+?)(?=\\n\\[|$)`, 's');
+                let match = text.match(regex);
+                if (!match) {
+                    regex = new RegExp(`##?\\s*${sectionName}\\s*\\n(.+?)(?=\\n##?|$)`, 's');
+                    match = text.match(regex);
+                }
+                if (match) {
+                    return match[1].trim().split('\n')
+                        .map(line => line.replace(/^[\d\-\*]+[\.\)、]?\s*/, '').trim())
+                        .filter(line => line.length > 0 && !line.match(/^总分|^肘关节|^躯干|^步幅|^上下肢/));
+                }
+                return [];
+            };
+
+            sections.advantages = parseList('优点');
+            if (sections.advantages.length === 0) {
+                sections.advantages = parseList('做得好的地方');
+            }
+            if (sections.advantages.length === 0) {
+                sections.advantages = parseList('优势');
+            }
+            if (sections.advantages.length === 0) {
+                sections.advantages = parseList('表现良好');
+            }
+
+            sections.improvements = parseList('改进建议');
+            if (sections.improvements.length === 0) {
+                sections.improvements = parseList('需要改进');
+            }
+            if (sections.improvements.length === 0) {
+                sections.improvements = parseList('需要改进的地方');
+            }
+
+            sections.training = parseList('训练计划');
+            if (sections.training.length === 0) {
+                sections.training = parseList('训练建议');
+            }
+
+            console.log('解析结果:', sections);
+
+            return sections;
+        }
+
+        function exportReport() {
+            const blob = new Blob([rawReportText], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `跑步分析报告_${new Date().toLocaleDateString()}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+    </script>
+</body>
+</html>
